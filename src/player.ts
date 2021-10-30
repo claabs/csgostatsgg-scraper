@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { Agent, Handler, KeyboardKeys, Tab } from 'secret-agent';
+import { Agent, Handler, KeyboardKeys, LocationStatus, Tab } from 'secret-agent';
 import { URLSearchParams } from 'url';
 import debug, { Debugger } from 'debug';
 import SteamID from 'steamid';
@@ -69,10 +69,15 @@ export class CSGOStatsGGScraper {
   ): Promise<PlayerOutput> {
     const agent = (await this.handler.createAgent()) as Agent;
     this.debug(`Going to ${HOMEPAGE}`);
-    await agent.goto(HOMEPAGE);
+    const gotoResp = await agent.goto(HOMEPAGE);
 
-    // TODO: Check for Cloudflare
+    // Cloudflare page will return a 403
+    const statusCode = await gotoResp.response.statusCode;
+    if (statusCode !== 200) {
+      throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
+    }
 
+    await agent.activeTab.waitForLoad(LocationStatus.DomContentLoaded);
     await agent.interact(
       { click: agent.document.querySelector(`#search-input`) },
       { type: searchString },
@@ -81,7 +86,17 @@ export class CSGOStatsGGScraper {
 
     this.debug(`Waiting for location change`);
     await agent.waitForLocation('change');
-    // TODO: Check for 404
+
+    const errorBanner = agent.document.querySelector(`div.alert.alert-danger`);
+    let errorMessage;
+    try {
+      errorMessage = (await errorBanner.innerText).trim();
+    } catch {
+      errorMessage = undefined;
+    }
+    if (errorMessage) throw new Error(errorMessage);
+
+    // Check for 404
     const steamId64 = (await agent.document.location.pathname).split('/').at(-1) as string;
     this.debug(`steamId64: ${steamId64}`);
     await agent.close();
@@ -117,11 +132,15 @@ export class CSGOStatsGGScraper {
       resolvedUrl = `${resolvedUrl}?${params}`;
     }
     this.debug(`Going to ${resolvedUrl}`);
-    await agent.goto(resolvedUrl);
-    // TODO: Check for 404
+    const gotoResp = await agent.goto(resolvedUrl);
+
+    // Check for page error
+    const statusCode = await gotoResp.response.statusCode;
+    if (statusCode !== 200) {
+      throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
+    }
 
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
-
     const steamProfileUrl = await agent.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
     const steamPictureUrl = await agent.document.querySelector(
@@ -279,8 +298,9 @@ export class CSGOStatsGGScraper {
       const params = new URLSearchParams(filteredParams);
       postUrl = `${postUrl}?${params}`;
     }
-    const resp = await agent.fetch(postUrl, { method: 'post' });
-    if (!resp.ok) throw resp;
+    const resp = await agent.fetch(postUrl, { method: 'get' });
+    if (!(await resp.ok))
+      throw new Error(`Failed to get playedWith data: ${await resp.statusText}`);
     const body: PlayedWith = await resp.json();
     await agent.close();
     return body;

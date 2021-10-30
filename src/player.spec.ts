@@ -1,5 +1,5 @@
 import { CSGOStatsGGScraper } from './player';
-import { MatchType, PlayerOutput } from './player-types';
+import { MatchType } from './player-types';
 
 jest.setTimeout(60000);
 describe('The Player class', () => {
@@ -14,7 +14,7 @@ describe('The Player class', () => {
   });
 
   it('should get data for one player', async () => {
-    const results = (await scraper.searchPlayer('hiko36')) as PlayerOutput; // Retired gamer
+    const results = await scraper.searchPlayer('hiko36'); // Retired gamer
     expect(results.summary).toMatchObject({
       steamId64: '76561197960268519',
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
@@ -37,9 +37,9 @@ describe('The Player class', () => {
   });
 
   it('should return no stats when no matches found', async () => {
-    const results = (await scraper.searchPlayer('hiko36', {
+    const results = await scraper.searchPlayer('hiko36', {
       matchType: MatchType.SCRIMMAGE,
-    })) as PlayerOutput; // Retired gamer
+    }); // Retired gamer
     expect(results.summary).toMatchObject({
       steamId64: '76561197960268519',
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
@@ -51,5 +51,33 @@ describe('The Player class', () => {
     });
     expect(results.stats).toBeUndefined();
     expect(results.graphs).toBeUndefined();
+  });
+
+  it('should return playedWith stats', async () => {
+    const results = await scraper.getPlayedWith('76561197960268519'); // Retired gamer
+    expect(results.players).toHaveLength(50);
+    expect(results.offset).toEqual(0);
+    expect(results.vac).toEqual('0');
+  });
+
+  it('should return playedWith stats with filters', async () => {
+    const results = await scraper.getPlayedWith('76561197960268519', {
+      vac: true,
+    }); // Retired gamer
+    expect(results.players).toHaveLength(48);
+    expect(results.offset).toEqual(0);
+    expect(results.vac).toEqual('1');
+  });
+
+  it('should throw on invalid search', async () => {
+    await expect(scraper.searchPlayer('923498jdflkj2309usijkjf')).rejects.toThrow(
+      'Error Invalid Steam Id, please try again'
+    );
+  });
+
+  it('should throw on invalid get', async () => {
+    await expect(scraper.getPlayer('999')).rejects.toThrow(
+      'csgostats.gg returned a non-200 response: 404'
+    );
   });
 });
