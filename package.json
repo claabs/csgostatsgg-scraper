@@ -19,6 +19,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "chrono-node": "^2.3.2",
     "debug": "^4.3.2",
     "dotenv": "^8.2.0",
     "secret-agent": "^1.5.13",

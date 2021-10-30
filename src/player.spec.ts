@@ -14,15 +14,19 @@ describe('The Player class', () => {
   });
 
   it('should get data for one player', async () => {
-    const results = await scraper.searchPlayer('hiko36'); // Retired gamer
+    const results = await scraper.searchPlayer('hiko36'); // Hiko
     expect(results.summary).toMatchObject({
       steamId64: '76561197960268519',
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
+      eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
       currentRank: 15,
       bestRank: 17,
       competitiveWins: 964,
+      lastGameDate: new Date('2020-09-24T01:00:00.000Z'),
+      banType: undefined,
+      banDate: undefined,
     });
     expect(results.stats).toMatchObject({
       killDeathRatio: 1.68,
@@ -36,25 +40,64 @@ describe('The Player class', () => {
     expect(results.graphs?.rawData).toHaveLength(98);
   });
 
-  it('should return no stats when no matches found', async () => {
+  it('should get data for banned player', async () => {
+    const results = await scraper.searchPlayer('76561198000020858'); // KQLY
+    expect(results.summary).toMatchObject({
+      steamId64: '76561198000020858',
+      steamProfileUrl: 'https://steamcommunity.com/profiles/76561198000020858',
+      steamPictureUrl:
+        'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg',
+      banType: 'VAC',
+      banDate: expect.any(Date),
+      lastGameDate: new Date('2014-08-17T19:00:00.000Z'),
+    });
+    expect(results.stats).toMatchObject({
+      killDeathRatio: 1,
+      hltvRating: 0.33,
+      clutchSuccessRate: 0,
+      winRate: 0.33,
+      headshotRate: 0.35,
+      averageDamageRound: 0,
+      entrySuccessRate: 0.15,
+    });
+    expect(results.graphs?.rawData).toHaveLength(98);
+  });
+
+  it('should return no detailed stats when no matches found with filter', async () => {
     const results = await scraper.searchPlayer('hiko36', {
       matchType: MatchType.SCRIMMAGE,
-    }); // Retired gamer
+    }); // Hiko
     expect(results.summary).toMatchObject({
       steamId64: '76561197960268519',
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
+      eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
       currentRank: 15,
       bestRank: 17,
       competitiveWins: 964,
+      lastGameDate: new Date('2020-09-24T01:00:00.000Z'),
+      banType: undefined,
+      banDate: undefined,
+    });
+    expect(results.stats).toBeUndefined();
+    expect(results.graphs).toBeUndefined();
+  });
+
+  it('should return no stats when player never played a match', async () => {
+    const results = await scraper.searchPlayer('76561198067520980'); // Non-CSGO player
+    expect(results.summary).toMatchObject({
+      steamId64: '76561198067520980',
+      steamProfileUrl: 'https://steamcommunity.com/profiles/76561198067520980',
+      steamPictureUrl:
+        'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/6a/6aaafaada69aaa226542ae137ac994c0181f5c1d_full.jpg',
     });
     expect(results.stats).toBeUndefined();
     expect(results.graphs).toBeUndefined();
   });
 
   it('should return playedWith stats', async () => {
-    const results = await scraper.getPlayedWith('76561197960268519'); // Retired gamer
+    const results = await scraper.getPlayedWith('76561197960268519'); // Hiko
     expect(results.players).toHaveLength(50);
     expect(results.offset).toEqual(0);
     expect(results.vac).toEqual('0');
@@ -63,7 +106,7 @@ describe('The Player class', () => {
   it('should return playedWith stats with filters', async () => {
     const results = await scraper.getPlayedWith('76561197960268519', {
       vac: true,
-    }); // Retired gamer
+    }); // Hiko
     expect(results.players).toHaveLength(48);
     expect(results.offset).toEqual(0);
     expect(results.vac).toEqual('1');

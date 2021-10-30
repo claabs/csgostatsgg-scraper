@@ -3,6 +3,7 @@ import { Agent, Handler, KeyboardKeys, LocationStatus, Tab } from 'secret-agent'
 import { URLSearchParams } from 'url';
 import debug, { Debugger } from 'debug';
 import SteamID from 'steamid';
+import * as chrono from 'chrono-node';
 import {
   PlayerFilterParams,
   PlayerOptions,
@@ -11,6 +12,7 @@ import {
   PlayedWithFilterParams,
   PlayedWith,
   MatchmakingRank,
+  BanType,
 } from './player-types';
 
 function booleanToInt(boolean?: boolean): number | undefined {
@@ -27,20 +29,47 @@ async function parseNumber(
   agent: Agent | Tab,
   parseFunc: typeof parseInt | typeof parseFloat,
   selector: string
-): Promise<number> {
-  return parseFunc(await agent.document.querySelector(selector).innerText, 10);
+): Promise<number | undefined> {
+  try {
+    return parseFunc(await agent.document.querySelector(selector).innerText, 10);
+  } catch {
+    return undefined;
+  }
 }
 
-async function parseRank(agent: Agent | Tab, selectorSuffix: string): Promise<MatchmakingRank> {
+async function parseRank(
+  agent: Agent | Tab,
+  selectorSuffix: string
+): Promise<MatchmakingRank | undefined> {
   const rankImgUrlPrefix = 'https://static.csgostats.gg/images/ranks/';
   const rankImgUrlExt = '.png';
-  const rankImgUrl = await agent.document.querySelector(
-    `img[src^="${rankImgUrlPrefix}"]${selectorSuffix}`
-  ).src;
+  let rankImgUrl;
+  try {
+    rankImgUrl = await agent.document.querySelector(
+      `img[src^="${rankImgUrlPrefix}"]${selectorSuffix}`
+    ).src;
+  } catch {
+    return undefined;
+  }
   return parseInt(
     rankImgUrl.substring(rankImgUrlPrefix.length, rankImgUrl.indexOf(rankImgUrlExt)),
     10
   );
+}
+
+function parseCSGOStatsDate(dateString: string): Date {
+  // Last Game Sun, 9th May
+  // Last Game Mon, 2nd Nov, 20
+  // Last Game 2 days ago
+  // Last Game 25 minutes ago
+  // Overwatch Banned 97 days ago.
+  const resolvedDate = chrono.parseDate(dateString);
+  // Chrono doesn't detect the trailing 2-digit year, so we have to detect it and append it manually
+  const [, endYear] = dateString.match(/^.*?,.*?, (\d{2})$/) || [];
+  if (endYear) {
+    resolvedDate.setFullYear(2000 + parseInt(endYear, 10));
+  }
+  return resolvedDate;
 }
 
 const HOMEPAGE = 'https://csgostats.gg';
@@ -143,6 +172,13 @@ export class CSGOStatsGGScraper {
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
     const steamProfileUrl = await agent.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
+    let eseaUrl;
+    try {
+      eseaUrl = await agent.document.querySelector('.esea-icon').parentElement.href;
+    } catch {
+      eseaUrl = undefined;
+    }
+    this.debug(`eseaUrl: ${eseaUrl}`);
     const steamPictureUrl = await agent.document.querySelector(
       'img[src*="steamcdn"][width="120"][height="120"]'
     ).src;
@@ -150,11 +186,36 @@ export class CSGOStatsGGScraper {
 
     const currentRank = await parseRank(agent, `[width="92"]`);
     this.debug(`currentRank: ${currentRank}`);
-    const bestRank = await parseRank(agent, `[height="24"]`);
+    let bestRank = await parseRank(agent, `[height="24"]`);
+    if (currentRank && !bestRank) bestRank = currentRank;
     this.debug(`bestRank: ${bestRank}`);
 
     const competitiveWins = await parseNumber(agent, parseInt, '#competitve-wins > span');
     this.debug(`competitiveWins: ${competitiveWins}`);
+
+    const lastGameAndBanElem = agent.document.querySelector('#last-game');
+    let lastGameString;
+    try {
+      lastGameString = (await lastGameAndBanElem.firstChild.textContent)?.trim() as string;
+    } catch {
+      lastGameString = undefined;
+    }
+    this.debug(`lastGameString: ${lastGameString}`);
+    let lastGameDate: Date | undefined;
+    if (lastGameString) {
+      lastGameDate = parseCSGOStatsDate(lastGameString);
+    }
+
+    let banString;
+    let banType: BanType | undefined;
+    let banDate: Date | undefined;
+    if ((await lastGameAndBanElem.childElementCount) > 1) {
+      banString = await lastGameAndBanElem.firstElementChild.innerText;
+      // Overwatch Banned 97 days ago.
+      // VAC Banned 83 days ago.
+      banType = banString.startsWith('VAC') ? BanType.VAC : BanType.OVERWATCH;
+      banDate = parseCSGOStatsDate(banString);
+    }
 
     // Check for no data
     const noMatchesMessage = agent.document.querySelector(
@@ -172,48 +233,52 @@ export class CSGOStatsGGScraper {
         summary: {
           steamId64,
           steamProfileUrl,
+          eseaUrl,
           steamPictureUrl,
           currentRank,
           bestRank,
           competitiveWins,
+          lastGameDate,
+          banType,
+          banDate,
         },
       };
     }
 
-    const killDeathRatio = await parseNumber(agent, parseFloat, `#kpd > span`);
+    const killDeathRatio = (await parseNumber(agent, parseFloat, `#kpd > span`)) as number;
     this.debug(`killDeathRatio: ${killDeathRatio}`);
-    const hltvRating = await parseNumber(agent, parseFloat, `#rating > span`);
+    const hltvRating = (await parseNumber(agent, parseFloat, `#rating > span`)) as number;
     this.debug(`hltvRating: ${hltvRating}`);
-    const clutchSuccessRate = await parseNumber(
+    const clutchSuccessRate = (await parseNumber(
       agent,
       parsePercent,
       `#player-overview > div.stats-col-2 > div > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > span:nth-child(2)`
-    );
+    )) as number;
     this.debug(`clutchSuccessRate: ${clutchSuccessRate}`);
 
-    const winRate = await parseNumber(
+    const winRate = (await parseNumber(
       agent,
       parsePercent,
       `#player-overview > div.stats-col-1 > div:nth-child(4) > div > div:nth-child(2) > div:nth-child(2)`
-    );
+    )) as number;
     this.debug(`winRate: ${winRate}`);
-    const headshotRate = await parseNumber(
+    const headshotRate = (await parseNumber(
       agent,
       parsePercent,
       `#player-overview > div.stats-col-1 > div:nth-child(5) > div > div:nth-child(2) > div:nth-child(2)`
-    );
+    )) as number;
     this.debug(`headshotRate: ${headshotRate}`);
-    const averageDamageRound = await parseNumber(
+    const averageDamageRound = (await parseNumber(
       agent,
       parseInt,
       `#player-overview > div.stats-col-1 > div:nth-child(6) > div > div:nth-child(2) > div:nth-child(2)`
-    );
+    )) as number;
     this.debug(`averageDamageRound: ${averageDamageRound}`);
-    const entrySuccessRate = await parseNumber(
+    const entrySuccessRate = (await parseNumber(
       agent,
       parsePercent,
       `#player-overview > div.stats-col-2 > div > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > span:nth-child(2)`
-    );
+    )) as number;
     this.debug(`entrySuccessRate: ${entrySuccessRate}`);
 
     // Sometimes the raw_data isn't defined yet, or the script block isn't even loaded, so we poll for it as needed
@@ -245,10 +310,14 @@ export class CSGOStatsGGScraper {
       summary: {
         steamId64,
         steamProfileUrl,
+        eseaUrl,
         steamPictureUrl,
         currentRank,
         bestRank,
         competitiveWins,
+        lastGameDate,
+        banType,
+        banDate,
       },
       stats: {
         killDeathRatio,

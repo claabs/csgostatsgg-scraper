@@ -142,13 +142,22 @@ export enum MatchmakingRank {
   GLOBAL_ELITE = 18,
 }
 
+export enum BanType {
+  VAC = 'VAC',
+  OVERWATCH = 'Overwatch',
+}
+
 export interface PlayerSummary {
   steamId64: string;
   steamProfileUrl: string;
+  eseaUrl?: string;
   steamPictureUrl: string;
-  currentRank: MatchmakingRank;
-  bestRank: MatchmakingRank;
-  competitiveWins: MatchmakingRank;
+  currentRank?: MatchmakingRank;
+  bestRank?: MatchmakingRank;
+  competitiveWins?: MatchmakingRank;
+  lastGameDate?: Date;
+  banType?: BanType;
+  banDate?: Date;
 }
 
 export interface PlayerStats {
