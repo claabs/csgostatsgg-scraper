@@ -60,7 +60,7 @@ describe('The Player class', () => {
       averageDamageRound: 0,
       entrySuccessRate: 0.15,
     });
-    expect(results.graphs?.rawData).toHaveLength(98);
+    expect(results.graphs?.rawData).toHaveLength(6);
   });
 
   it('should return no detailed stats when no matches found with filter', async () => {
