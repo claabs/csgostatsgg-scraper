@@ -63,6 +63,34 @@ describe('The Player class', () => {
     expect(results.graphs?.rawData).toHaveLength(6);
   });
 
+  it('should return handle 10 simultaneous requests (status command)', async () => {
+    const steamIDs = [
+      '76561198325964713',
+      '76561198223594140',
+      '76561198145522845',
+      '76561198164504051',
+      '76561197975324794',
+      '76561198000253201',
+      '76561198020996622',
+      '76561198382666964',
+      '76561198077588258',
+      '76561198150706831',
+    ];
+
+    const results = await Promise.all(
+      steamIDs.map(async (steamId) => {
+        const resp = await scraper.getPlayer(steamId);
+        expect(resp.summary).toMatchObject({
+          steamId64: expect.any(String),
+          steamProfileUrl: expect.any(String),
+          steamPictureUrl: expect.any(String),
+        });
+        return resp;
+      })
+    );
+    expect(results).toHaveLength(steamIDs.length);
+  });
+
   it('should return no detailed stats when no matches found with filter', async () => {
     const results = await scraper.searchPlayer('hiko36', {
       matchType: MatchType.SCRIMMAGE,
