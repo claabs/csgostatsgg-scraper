@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   env: {
-    node: true
+    node: true,
   },
   extends: [
     'airbnb-base',
@@ -12,7 +12,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: './tsconfig.json',
-    sourceType: 'module'
+    sourceType: 'module',
   },
   plugins: ['@typescript-eslint', 'jest'],
   rules: {
@@ -22,20 +22,15 @@ module.exports = {
     '@typescript-eslint/no-shadow': ['error'],
   },
   settings: {
-    'import/extensions': ['.js', '.ts',],
+    'import/extensions': ['.js', '.ts'],
     'import/parsers': {
-      '@typescript-eslint/parser': ['.ts']
+      '@typescript-eslint/parser': ['.ts'],
     },
     'import/resolver': {
       node: {
-        extensions: ['.js', '.ts',]
-      }
-    }
+        extensions: ['.js', '.ts'],
+      },
+    },
   },
-  ignorePatterns: [
-    '**/node_modules/**',
-    'dist/**',
-    '**/*.d.ts',
-    '*.js',
-  ],
-}
+  ignorePatterns: ['node_modules', 'dist', '**/*.d.ts'],
+};
