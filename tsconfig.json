@@ -4,22 +4,17 @@
     "module": "esnext", /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
     "outDir": "./dist", /* Redirect output structure to the directory. */
     "esModuleInterop": true,
-    "strict": true, /* Enable all strict type-checking options. */
-    "moduleResolution": "node", /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */
+    "strict": true,
     "typeRoots": [
       "node_modules/@types",
       "types"
-    ], /* List of folders to include type definitions from. */
-    "inlineSourceMap": true, /* Emit a single file with source maps instead of having a separate file. */
+    ],
+    "inlineSourceMap": true, // Inline sourcemaps for jest debugging
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true, // awaited-dom has compile issues
     "declaration": true,
     "declarationDir": "."
   },
-  "include": [
-    "**/*.ts",
-    "*.js"
-  ],
   "exclude": [
     "node_modules",
     "dist",
