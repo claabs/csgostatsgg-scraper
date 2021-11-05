@@ -8,7 +8,8 @@
   "scripts": {
     "test": "jest --coverage",
     "build": "rimraf dist && rollup -c rollup.config.ts",
-    "lint": "tsc --noEmit && eslint src/**/*.ts"
+    "lint": "tsc --noEmit && eslint src/**/*.ts",
+    "semantic-release": "semantic-release"
   },
   "keywords": [
     "csgostatsgg",
@@ -36,6 +37,8 @@
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.6",
     "@rollup/plugin-typescript": "^8.3.0",
+    "@semantic-release/github": "^8.0.2",
+    "@semantic-release/npm": "^8.0.3",
     "@types/debug": "^4.1.7",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.11.6",
@@ -52,11 +55,26 @@
     "prettier": "^2.4.1",
     "rollup": "^2.59.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
+    "semantic-release": "^18.0.0",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
     "typescript": "^4.4.4"
   },
   "engines": {
     "node": "16"
+  },
+  "files": [
+    "dist"
+  ],
+  "release": {
+    "branches": [
+      "master"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github",
+      "@semantic-release/npm"
+    ]
   }
 }
