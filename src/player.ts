@@ -229,6 +229,7 @@ export class CSGOStatsGGScraper {
     }
     if (errorMessage) {
       this.debug(errorMessage);
+      await agent.close();
       return {
         summary: {
           steamId64,
