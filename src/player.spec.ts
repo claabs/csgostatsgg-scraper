@@ -24,7 +24,7 @@ describe('The Player class', () => {
       currentRank: 15,
       bestRank: 17,
       competitiveWins: 964,
-      lastGameDate: new Date('2020-09-24T01:00:00.000Z'),
+      lastGameDate: expect.any(Date),
       banType: undefined,
       banDate: undefined,
     });
@@ -49,7 +49,7 @@ describe('The Player class', () => {
         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg',
       banType: 'VAC',
       banDate: expect.any(Date),
-      lastGameDate: new Date('2014-08-17T19:00:00.000Z'),
+      lastGameDate: expect.any(Date),
     });
     expect(results.stats).toMatchObject({
       killDeathRatio: 1,
@@ -104,7 +104,7 @@ describe('The Player class', () => {
       currentRank: 15,
       bestRank: 17,
       competitiveWins: 964,
-      lastGameDate: new Date('2020-09-24T01:00:00.000Z'),
+      lastGameDate: expect.any(Date),
       banType: undefined,
       banDate: undefined,
     });
