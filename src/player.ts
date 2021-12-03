@@ -86,7 +86,7 @@ export class CSGOStatsGGScraper {
     });
     this.handler.defaultAgentOptions = {
       ...this.handler.defaultAgentOptions,
-      blockedResourceTypes: ['BlockCssResources', 'BlockImages'],
+      blockedResourceTypes: ['All'],
       ...options?.agentOverrides,
     };
     this.debug = debug('csgostatsgg-scraper');
@@ -282,27 +282,14 @@ export class CSGOStatsGGScraper {
     )) as number;
     this.debug(`entrySuccessRate: ${entrySuccessRate}`);
 
-    // Sometimes the raw_data isn't defined yet, or the script block isn't even loaded, so we poll for it as needed
-    async function waitForRawData(
-      startTime = new Date(),
-      timeout = 30000,
-      poll = 100
-    ): Promise<GraphsRawData> {
-      try {
-        const rawData: GraphsRawData = await agent.getJsValue('raw_data');
-        return rawData;
-      } catch (err) {
-        if (startTime.getTime() + timeout <= new Date().getTime()) {
-          throw new Error(`Timeout after ${timeout}ms: ${err.message}`);
-        }
-        await new Promise((resolve) => setTimeout(resolve, poll));
-        return waitForRawData(startTime, timeout, poll);
-      }
+    const documentHtml = await agent.document.documentElement.innerHTML;
+    const rawDataMatches = documentHtml.match(/raw_data = (\[.*?\]);\n/);
+    let graphsRawData: GraphsRawData;
+    if (rawDataMatches?.[1]) {
+      graphsRawData = JSON.parse(rawDataMatches[1]);
+    } else {
+      graphsRawData = [];
     }
-    // Alternative
-    // const [, stringifiedRawData] = graphsScript.match(/raw_data = (\[.*?\]);\n/) || [];
-
-    const graphsRawData: GraphsRawData = await waitForRawData();
 
     this.debug(`graphsRawData.length: ${graphsRawData.length}`);
 
