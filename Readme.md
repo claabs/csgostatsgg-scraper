@@ -14,5 +14,11 @@ Due to csgostats.gg not having an API, and being mostly protected by Cloudflare,
 - [ ] Player page map stats
 - [ ] Player page matches data
 - [x] Player page "Played With" section
-- [ ] Match page
+- [x] Global recent matches list
+- [x] Match page summary data
+- [ ] Match page scoreboard
+- [ ] Match page rounds
+- [ ] Match page weapons
+- [ ] Match page duels
+- [ ] Match page heatmaps
 - [ ] Leaderboards

@@ -1,12 +1,13 @@
-import { CSGOStatsGGScraper } from './player';
+/* eslint-disable no-console */
+import { CSGOStatsGGScraper } from './index';
 import { MatchType } from './player-types';
 
-jest.setTimeout(60000);
-describe('The Player class', () => {
+jest.setTimeout(5 * 60 * 1000);
+describe('The player scrapers', () => {
   let scraper: CSGOStatsGGScraper;
 
   beforeAll(async () => {
-    scraper = new CSGOStatsGGScraper();
+    scraper = new CSGOStatsGGScraper({ logger: console.log });
   });
 
   afterAll(async () => {
@@ -21,9 +22,9 @@ describe('The Player class', () => {
       eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
-      currentRank: 15,
+      currentRank: 13,
       bestRank: 17,
-      competitiveWins: 964,
+      competitiveWins: 968,
       lastGameDate: expect.any(Date),
       banType: undefined,
       banDate: undefined,
@@ -31,13 +32,13 @@ describe('The Player class', () => {
     expect(results.stats).toMatchObject({
       killDeathRatio: 1.68,
       hltvRating: 1.4,
-      clutchSuccessRate: 0.19,
-      winRate: 0.54,
+      clutchSuccessRate: 0.18,
+      winRate: 0.56,
       headshotRate: 0.53,
       averageDamageRound: 97,
       entrySuccessRate: 0.09,
     });
-    expect(results.graphs?.rawData).toHaveLength(98);
+    expect(results.graphs?.rawData).toHaveLength(102);
   });
 
   it('should get data for banned player', async () => {
@@ -101,9 +102,9 @@ describe('The Player class', () => {
       eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
-      currentRank: 15,
+      currentRank: 13,
       bestRank: 17,
-      competitiveWins: 964,
+      competitiveWins: 968,
       lastGameDate: expect.any(Date),
       banType: undefined,
       banDate: undefined,
@@ -135,14 +136,14 @@ describe('The Player class', () => {
     const results = await scraper.getPlayedWith('76561197960268519', {
       vac: true,
     }); // Hiko
-    expect(results.players).toHaveLength(48);
+    expect(results.players).toHaveLength(50);
     expect(results.offset).toEqual(0);
     expect(results.vac).toEqual('1');
   });
 
   it('should throw on invalid search', async () => {
     await expect(scraper.searchPlayer('923498jdflkj2309usijkjf')).rejects.toThrow(
-      'Error Invalid Steam Id, please try again'
+      /Invalid Steam Id, please try again/
     );
   });
 

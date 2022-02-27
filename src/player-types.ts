@@ -1,10 +1,4 @@
 /* eslint-disable camelcase */
-import { IAgentCreateOptions, IConnectionToCoreOptions } from 'secret-agent';
-
-export interface PlayerOptions {
-  handlerOverrides?: IConnectionToCoreOptions;
-  agentOverrides?: IAgentCreateOptions;
-}
 
 export enum MatchType {
   COMPETITIVE = 'comp',

@@ -20,6 +20,7 @@ module.exports = {
     'import/prefer-default-export': 0,
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': ['error'],
+    'import/no-cycle': 0,
   },
   settings: {
     'import/extensions': ['.js', '.ts'],
