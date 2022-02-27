@@ -38,17 +38,33 @@ export class CSGOStatsGGScraper {
     this.debug = (options?.logger as Debugger) ?? this.debug;
   }
 
-  public searchPlayer = searchPlayer;
+  public searchPlayer(...args: Parameters<typeof searchPlayer>): ReturnType<typeof searchPlayer> {
+    return searchPlayer.bind(this)(...args);
+  }
 
-  public getPlayer = getPlayer;
+  public getPlayer(...args: Parameters<typeof getPlayer>): ReturnType<typeof getPlayer> {
+    return getPlayer.bind(this)(...args);
+  }
 
-  public getPlayedWith = getPlayedWith;
+  public getPlayedWith(
+    ...args: Parameters<typeof getPlayedWith>
+  ): ReturnType<typeof getPlayedWith> {
+    return getPlayedWith.bind(this)(...args);
+  }
 
-  public searchMatch = searchMatch;
+  public searchMatch(...args: Parameters<typeof searchMatch>): ReturnType<typeof searchMatch> {
+    return searchMatch.bind(this)(...args);
+  }
 
-  public getMatch = getMatch;
+  public getMatch(...args: Parameters<typeof getMatch>): ReturnType<typeof getMatch> {
+    return getMatch.bind(this)(...args);
+  }
 
-  public listLatestMatches = listLatestMatches;
+  public listLatestMatches(
+    ...args: Parameters<typeof listLatestMatches>
+  ): ReturnType<typeof listLatestMatches> {
+    return listLatestMatches.bind(this)(...args);
+  }
 
   public async close(): Promise<void> {
     this.debug('Closing agents');
