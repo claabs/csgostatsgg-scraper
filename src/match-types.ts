@@ -102,7 +102,7 @@ export const eseaIconMap: Record<string, ESEARank> = {
 
 export interface MatchOutput {
   matchmakingService: MatchMakingService;
-  averageRank: MatchmakingRank | FaceItRank | ESEARank;
+  averageRank?: MatchmakingRank | FaceItRank | ESEARank;
   map: string;
   serverLocation?: string;
   date: Date;
@@ -117,6 +117,6 @@ export interface MatchOutput {
 export interface MatchSummary {
   matchId: number;
   matchmakingService: MatchMakingService;
-  averageRank: MatchmakingRank | FaceItRank | ESEARank;
+  averageRank?: MatchmakingRank | FaceItRank | ESEARank;
   date: Date;
 }

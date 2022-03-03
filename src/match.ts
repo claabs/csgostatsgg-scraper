@@ -41,7 +41,10 @@ function getMMService(mmServiceIconPath: string): MatchMakingService {
   return matchmakingService;
 }
 
-function getAverageRank(avgRankIconUrl: string): MatchmakingRank | FaceItRank | ESEARank {
+function getAverageRank(
+  avgRankIconUrl?: string
+): MatchmakingRank | FaceItRank | ESEARank | undefined {
+  if (!avgRankIconUrl) return undefined;
   const rankUrlPrefix = 'https://static.csgostats.gg/images/ranks/';
   const faceitRankUrlPrefix = `${rankUrlPrefix}faceit/`;
   const eseaRankUrlPrefix = `${rankUrlPrefix}esea/`;
@@ -89,9 +92,15 @@ export async function getMatch(this: CSGOStatsGGScraper, matchId: number): Promi
   const matchmakingService = getMMService(mmServiceIconPath);
   this.debug(`Got matchmakingService: ${matchmakingService}`);
 
-  const avgRankIconUrl = await agent.document.querySelector(
-    `span > img[src^="https://static.csgostats.gg/images/ranks/"]`
-  ).src;
+  let avgRankIconUrl: string | undefined;
+  try {
+    avgRankIconUrl = await agent.document.querySelector(
+      `span > img[src^="https://static.csgostats.gg/images/ranks/"]`
+    ).src;
+  } catch {
+    avgRankIconUrl = undefined;
+  }
+
   const averageRank = getAverageRank(avgRankIconUrl);
 
   this.debug(`Got averageRank: ${averageRank}`);
@@ -209,7 +218,12 @@ export async function listLatestMatches(this: CSGOStatsGGScraper): Promise<Match
       const mmServiceIconPath = await row.children.item(0).querySelector('img').src;
       const matchmakingService = getMMService(mmServiceIconPath);
 
-      const avgRankIconUrl = await row.children.item(1).querySelector('img').src;
+      let avgRankIconUrl: string | undefined;
+      try {
+        avgRankIconUrl = await row.children.item(1).querySelector('img').src;
+      } catch {
+        avgRankIconUrl = undefined;
+      }
       const averageRank = getAverageRank(avgRankIconUrl);
 
       const dateText = await row.children.item(2).innerText;
