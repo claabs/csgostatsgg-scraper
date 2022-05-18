@@ -191,7 +191,8 @@ export async function getPlayer(
     let banString;
     let banType: BanType | undefined;
     let banDate: Date | undefined;
-    if ((await lastGameAndBanElem.childElementCount) > 1) {
+    const lastGameChildElementCount = await lastGameAndBanElem.childElementCount;
+    if (lastGameChildElementCount === 1) {
       banString = await lastGameAndBanElem.firstElementChild.innerText;
       // Overwatch Banned 97 days ago.
       // VAC Banned 83 days ago.

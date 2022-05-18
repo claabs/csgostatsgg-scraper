@@ -22,8 +22,8 @@ describe('The match scrapers', () => {
       expect(summary).toMatchObject({
         matchId: expect.any(Number),
         matchmakingService: expect.any(String),
-        averageRank: expect.anything(),
         date: expect.any(Date),
+        // averageRank can be undefined, so not much to test on...
       });
     });
   });
