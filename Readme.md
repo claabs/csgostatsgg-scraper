@@ -2,7 +2,7 @@
 
 A consumable Node package to (heavy-handedly) scrape data from csgostats.gg.
 Due to csgostats.gg not having an API, and being mostly protected by Cloudflare, the best approach is to spin up a headless browser to load the page and scrape it.
-[SecretAgent](https://secretagent.dev/) is used to bypass Cloudflare and manage the DOM scraping.
+[Ulixee Hero](https://ulixee.org/docs/hero) is used to bypass Cloudflare and manage the DOM scraping.
 
 ## Progress
 
@@ -22,3 +22,15 @@ Due to csgostats.gg not having an API, and being mostly protected by Cloudflare,
 - [ ] Match page duels
 - [ ] Match page heatmaps
 - [ ] Leaderboards
+
+## Usage
+
+### Install
+
+To start, it's best to run with a local Hero Core, so you should install `@ulixee/hero-fullstack` as a peer dependency:
+
+```shell
+npm i csgostatsgg-scraper @ulixee/hero-fullstack
+```
+
+Later, if you'd like to use a remote Hero Core, you can remove the `@ulixee/hero-fullstack` peer dependency.

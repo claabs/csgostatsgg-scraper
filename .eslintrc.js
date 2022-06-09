@@ -20,6 +20,7 @@ module.exports = {
     'import/prefer-default-export': 0,
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': ['error'],
+    '@typescript-eslint/await-thenable': ['error'],
     'import/no-cycle': 0,
   },
   settings: {
@@ -33,5 +34,5 @@ module.exports = {
       },
     },
   },
-  ignorePatterns: ['node_modules', 'dist', '**/*.d.ts'],
+  ignorePatterns: ['node_modules', 'dist', '**/*.d.ts', '.eslintrc.js'],
 };

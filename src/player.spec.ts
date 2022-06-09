@@ -10,9 +10,9 @@ describe('The player scrapers', () => {
     scraper = new CSGOStatsGGScraper({ logger: console.log });
   });
 
-  afterAll(async () => {
-    await scraper.close();
-  });
+  // afterAll(async () => {
+  //   await scraper.close();
+  // });
 
   it('should get data for one player', async () => {
     const results = await scraper.searchPlayer('hiko36'); // Hiko
@@ -21,7 +21,7 @@ describe('The player scrapers', () => {
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
       eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
-        'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
+        'https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
       bestRank: 17,
       lastGameDate: expect.any(Date),
       banType: undefined,
@@ -99,7 +99,7 @@ describe('The player scrapers', () => {
       steamProfileUrl: 'https://steamcommunity.com/profiles/76561197960268519',
       eseaUrl: 'https://play.esea.net/users/135432',
       steamPictureUrl:
-        'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/d4/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
+        'https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg',
       bestRank: 17,
       lastGameDate: expect.any(Date),
       banType: undefined,

@@ -1,4 +1,3 @@
-import { Agent } from 'secret-agent';
 import { URLSearchParams } from 'url';
 import * as chrono from 'chrono-node';
 import { HOMEPAGE } from './constants';
@@ -72,72 +71,68 @@ function getAverageRank(
 }
 
 export async function getMatch(this: CSGOStatsGGScraper, matchId: number): Promise<MatchOutput> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = await this.createHero();
 
   try {
     const resolvedUrl = `${HOMEPAGE}/match/${matchId}`;
 
     this.debug(`Navigating to ${resolvedUrl}`);
-    const gotoResp = await agent.goto(resolvedUrl);
+    const gotoResp = await hero.goto(resolvedUrl);
 
     // Check for page error
-    const statusCode = await gotoResp.response.statusCode;
+    const { statusCode } = gotoResp.response;
     if (statusCode !== 200) {
       throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
     }
 
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
-    const mmServiceIconPath = await agent.document.querySelector(
+    const mmServiceIconPath = await hero.document.querySelector(
       '#match-main > div > div.main-header > div.main-content > div:nth-child(1) > div > img'
     ).src;
     const matchmakingService = getMMService(mmServiceIconPath);
     this.debug(`Got matchmakingService: ${matchmakingService}`);
 
+    const avgRankElem = hero.document.querySelector(
+      `span > img[src^="https://static.csgostats.gg/images/ranks/"]`
+    );
     let avgRankIconUrl: string | undefined;
-    try {
-      avgRankIconUrl = await agent.document.querySelector(
-        `span > img[src^="https://static.csgostats.gg/images/ranks/"]`
-      ).src;
-    } catch {
-      avgRankIconUrl = undefined;
+    if (await avgRankElem.$exists) {
+      avgRankIconUrl = await avgRankElem.src;
     }
 
     const averageRank = getAverageRank(avgRankIconUrl);
 
     this.debug(`Got averageRank: ${averageRank}`);
 
-    const map = await agent.document.querySelector('.map-text').innerText;
+    const map = await hero.document.querySelector('.map-text').innerText;
     this.debug(`Got map: ${map}`);
 
-    let serverLocation;
-    try {
-      serverLocation = await agent.document.querySelector('.server-loc-text').innerText;
-    } catch {
-      serverLocation = undefined;
+    const serverLocationElem = hero.document.querySelector('.server-loc-text');
+    let serverLocation: string | undefined;
+    if (await serverLocationElem.$exists) {
+      serverLocation = await serverLocationElem.innerText;
     }
     this.debug(`Got serverLocation: ${serverLocation}`);
 
-    const dateText = await agent.document.querySelector('.match-date-text').innerText;
+    const dateText = await hero.document.querySelector('.match-date-text').innerText;
     const date = chrono.parseDate(dateText, { timezone: 'UTC' });
     this.debug(`Got date: ${date}`);
 
-    let watchUrl;
-    try {
-      watchUrl = await agent.document.querySelector('.match-watch > a').href;
-    } catch {
-      watchUrl = undefined;
+    let watchUrl: string | undefined;
+    const watchUrlElem = hero.document.querySelector('.match-watch > a');
+    if (await watchUrlElem.$exists) {
+      watchUrl = await watchUrlElem.href;
     }
 
     let watchDaysText;
-    try {
-      watchDaysText = await agent.document.querySelector('.match-watch-days').innerText;
-    } catch {
-      watchDaysText = undefined;
+    const watchDaysElem = hero.document.querySelector('.match-watch-days');
+    if (await watchDaysElem.$exists) {
+      watchDaysText = await watchDaysElem.innerText;
     }
     const watchDaysNumberText = watchDaysText?.match(/\((\d+).*\)/)?.[1];
     const demoWatchDays = watchDaysNumberText ? parseInt(watchDaysNumberText, 10) : undefined;
 
-    const hasBannedPlayer = (await agent.document.querySelectorAll('.has-banned').length) > 0;
+    const hasBannedPlayer = (await hero.document.querySelectorAll('.has-banned').length) > 0;
 
     //   const team1Name = await agent.document.querySelector(
     //     '#team-1-outer > div:nth-child(2) > div:nth-child(1)'
@@ -146,7 +141,7 @@ export async function getMatch(this: CSGOStatsGGScraper, matchId: number): Promi
     //     '#team-2-outer > div:nth-child(2) > div:nth-child(1)'
     //   ).innerText;
 
-    await agent.close();
+    await hero.close();
     return {
       matchmakingService,
       averageRank,
@@ -158,7 +153,7 @@ export async function getMatch(this: CSGOStatsGGScraper, matchId: number): Promi
       hasBannedPlayer,
     };
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }
@@ -167,10 +162,10 @@ export async function searchMatch(
   this: CSGOStatsGGScraper,
   shareCode: string
 ): Promise<MatchOutput> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = await this.createHero();
   try {
     this.debug(`Going to ${HOMEPAGE}`);
-    await agent.goto(HOMEPAGE);
+    await hero.goto(HOMEPAGE);
 
     const requestBody = new URLSearchParams({
       sharecode: shareCode,
@@ -178,7 +173,7 @@ export async function searchMatch(
     }).toString();
     const ajaxUrl = `https://csgostats.gg/match/upload/ajax`;
     this.debug(`requestBody: ${requestBody}`);
-    const resp = await agent.fetch(ajaxUrl, {
+    const resp = await hero.fetch(ajaxUrl, {
       method: 'post',
       body: requestBody,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -192,33 +187,34 @@ export async function searchMatch(
     const matchId = body.data.demo_id;
     this.debug(`matchId: ${matchId}`);
 
-    await agent.close();
+    await hero.close();
     return this.getMatch(matchId);
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }
 
 export async function listLatestMatches(this: CSGOStatsGGScraper): Promise<MatchSummary[]> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = await this.createHero();
   try {
     const resolvedUrl = `${HOMEPAGE}/match`;
 
     this.debug(`Navigating to ${resolvedUrl}`);
-    const gotoResp = await agent.goto(resolvedUrl);
+    const gotoResp = await hero.goto(resolvedUrl);
 
     // Check for page error
-    const statusCode = await gotoResp.response.statusCode;
+    const { statusCode } = gotoResp.response;
     if (statusCode !== 200) {
       throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
     }
 
-    const matchRows = await agent.document.querySelectorAll('.p-row').values();
+    const matchRows = hero.document.querySelectorAll('.p-row');
     this.debug(`Parsing all match rows`);
-    const matchSummaries: MatchSummary[] = await Promise.all(
-      Array.from(matchRows).map(async (row): Promise<MatchSummary> => {
+    const matchSummaries: MatchSummary[] = await matchRows.$map(
+      async (row): Promise<MatchSummary> => {
         // const onClickAttr = await row.attributes.getNamedItem('onclick'); // Doesn't work for some reason
+        // eslint-disable-next-line @typescript-eslint/await-thenable
         const onClickAttr = Array.from(await row.attributes)[2]; // await is required here
         let matchId = 0;
         if (onClickAttr) {
@@ -230,10 +226,9 @@ export async function listLatestMatches(this: CSGOStatsGGScraper): Promise<Match
         const matchmakingService = getMMService(mmServiceIconPath);
 
         let avgRankIconUrl: string | undefined;
-        try {
-          avgRankIconUrl = await row.children.item(1).querySelector('img').src;
-        } catch {
-          avgRankIconUrl = undefined;
+        const avgRankIconUrlElem = row.children.item(1).querySelector('img');
+        if (await avgRankIconUrlElem.$exists) {
+          avgRankIconUrl = await avgRankIconUrlElem.src;
         }
         const averageRank = getAverageRank(avgRankIconUrl);
 
@@ -241,13 +236,12 @@ export async function listLatestMatches(this: CSGOStatsGGScraper): Promise<Match
         const date = chrono.parseDate(dateText, { timezone: 'UTC' });
 
         return { matchId, matchmakingService, averageRank, date };
-      })
+      }
     );
-
-    await agent.close();
+    await hero.close();
     return matchSummaries;
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }
