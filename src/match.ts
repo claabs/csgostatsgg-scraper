@@ -71,7 +71,7 @@ function getAverageRank(
 }
 
 export async function getMatch(this: CSGOStatsGGScraper, matchId: number): Promise<MatchOutput> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
 
   try {
     const resolvedUrl = `${HOMEPAGE}/match/${matchId}`;
@@ -162,7 +162,7 @@ export async function searchMatch(
   this: CSGOStatsGGScraper,
   shareCode: string
 ): Promise<MatchOutput> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
   try {
     this.debug(`Going to ${HOMEPAGE}`);
     await hero.goto(HOMEPAGE);
@@ -196,7 +196,7 @@ export async function searchMatch(
 }
 
 export async function listLatestMatches(this: CSGOStatsGGScraper): Promise<MatchSummary[]> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
   try {
     const resolvedUrl = `${HOMEPAGE}/match`;
 

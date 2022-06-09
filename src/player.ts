@@ -1,7 +1,7 @@
 import { URLSearchParams } from 'url';
 import SteamID from 'steamid';
 import * as chrono from 'chrono-node';
-import Hero, { KeyboardKey, LocationStatus } from '@ulixee/hero-fullstack';
+import Hero, { KeyboardKey, LocationStatus } from '@ulixee/hero';
 import {
   PlayerFilterParams,
   PlayerOutput,
@@ -25,7 +25,7 @@ function parsePercent(string: string, radix?: number): number {
 }
 
 async function parseNumber(
-  hero: Hero,
+  hero: Omit<Hero, 'then'>,
   parseFunc: typeof parseInt | typeof parseFloat,
   selector: string
 ): Promise<number | undefined> {
@@ -34,7 +34,10 @@ async function parseNumber(
   return parseFunc(await elem.innerText, 10);
 }
 
-async function parseRank(hero: Hero, selectorSuffix: string): Promise<MatchmakingRank | undefined> {
+async function parseRank(
+  hero: Omit<Hero, 'then'>,
+  selectorSuffix: string
+): Promise<MatchmakingRank | undefined> {
   const rankImgUrlPrefix = 'https://static.csgostats.gg/images/ranks/';
   const rankImgUrlExt = '.png';
   const rankImgElem = hero.document.querySelector(
@@ -68,7 +71,7 @@ export async function getPlayedWith(
   steamId64: string,
   filterParams?: PlayedWithFilterParams
 ): Promise<PlayedWith> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
   try {
     await hero.goto(HOMEPAGE, { timeoutMs: this.timeout });
     let ajaxUrl = `https://csgostats.gg/player/${steamId64}/ajax/played-with`;
@@ -109,7 +112,7 @@ export async function getPlayer(
   anySteamId: string | bigint,
   filterParams?: PlayerFilterParams
 ): Promise<PlayerOutput> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
   try {
     const steamId64 = new SteamID(anySteamId).getSteamID64();
 
@@ -312,7 +315,7 @@ export async function searchPlayer(
   searchString: string,
   filterParams?: PlayerFilterParams
 ): Promise<PlayerOutput> {
-  const hero = this.createHero();
+  const hero = await this.createHero();
   try {
     this.debug(`Going to ${HOMEPAGE}`);
     const gotoResp = await hero.goto(HOMEPAGE, { timeoutMs: this.timeout });

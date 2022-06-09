@@ -4,16 +4,6 @@ import { PlayerOutput } from './player-types';
 
 jest.setTimeout(5 * 60 * 1000);
 describe('The scraper class', () => {
-  let scraper: CSGOStatsGGScraper;
-
-  beforeAll(async () => {
-    scraper = new CSGOStatsGGScraper({ logger: console.log });
-  });
-
-  // afterAll(async () => {
-  //   await scraper.close();
-  // });
-
   it('should be extendable', async () => {
     class Extended extends CSGOStatsGGScraper {
       public async getPlayer(

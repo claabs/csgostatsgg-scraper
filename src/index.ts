@@ -1,5 +1,5 @@
 import debug, { Debugger } from 'debug';
-import Hero, { IHeroCreateOptions } from '@ulixee/hero-fullstack';
+import Hero, { IHeroCreateOptions } from '@ulixee/hero';
 import PQueue from 'p-queue';
 import { getMatch, listLatestMatches, searchMatch } from './match';
 import { getPlayedWith, getPlayer, searchPlayer } from './player';
@@ -50,8 +50,14 @@ export class CSGOStatsGGScraper {
     this.queue = new PQueue({ concurrency: options?.concurrency ?? 10 });
   }
 
-  protected createHero(): Hero {
-    return new Hero(this.heroOptions);
+  protected async createHero(): Promise<Hero> {
+    let ChosenHero: typeof Hero;
+    try {
+      ChosenHero = (await import('@ulixee/hero-fullstack')).default;
+    } catch {
+      ChosenHero = Hero;
+    }
+    return new ChosenHero(this.heroOptions);
   }
 
   public searchPlayer(...args: Parameters<typeof searchPlayer>): ReturnType<typeof searchPlayer> {
