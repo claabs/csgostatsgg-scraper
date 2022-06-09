@@ -1,7 +1,7 @@
-import { Agent, KeyboardKeys, LocationStatus, Tab } from 'secret-agent';
 import { URLSearchParams } from 'url';
 import SteamID from 'steamid';
 import * as chrono from 'chrono-node';
+import Hero, { KeyboardKey, LocationStatus } from '@ulixee/hero-fullstack';
 import {
   PlayerFilterParams,
   PlayerOutput,
@@ -25,31 +25,23 @@ function parsePercent(string: string, radix?: number): number {
 }
 
 async function parseNumber(
-  agent: Agent | Tab,
+  hero: Hero,
   parseFunc: typeof parseInt | typeof parseFloat,
   selector: string
 ): Promise<number | undefined> {
-  try {
-    return parseFunc(await agent.document.querySelector(selector).innerText, 10);
-  } catch {
-    return undefined;
-  }
+  const elem = hero.document.querySelector(selector);
+  if (!(await elem.$exists)) return undefined;
+  return parseFunc(await elem.innerText, 10);
 }
 
-async function parseRank(
-  agent: Agent | Tab,
-  selectorSuffix: string
-): Promise<MatchmakingRank | undefined> {
+async function parseRank(hero: Hero, selectorSuffix: string): Promise<MatchmakingRank | undefined> {
   const rankImgUrlPrefix = 'https://static.csgostats.gg/images/ranks/';
   const rankImgUrlExt = '.png';
-  let rankImgUrl;
-  try {
-    rankImgUrl = await agent.document.querySelector(
-      `img[src^="${rankImgUrlPrefix}"]${selectorSuffix}`
-    ).src;
-  } catch {
-    return undefined;
-  }
+  const rankImgElem = hero.document.querySelector(
+    `img[src^="${rankImgUrlPrefix}"]${selectorSuffix}`
+  );
+  if (!(await rankImgElem.$exists)) return undefined;
+  const rankImgUrl = await rankImgElem.src;
   return parseInt(
     rankImgUrl.substring(rankImgUrlPrefix.length, rankImgUrl.indexOf(rankImgUrlExt)),
     10
@@ -76,9 +68,9 @@ export async function getPlayedWith(
   steamId64: string,
   filterParams?: PlayedWithFilterParams
 ): Promise<PlayedWith> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = this.createHero();
   try {
-    await agent.goto(HOMEPAGE, this.timeout);
+    await hero.goto(HOMEPAGE, { timeoutMs: this.timeout });
     let ajaxUrl = `https://csgostats.gg/player/${steamId64}/ajax/played-with`;
     if (filterParams && Object.keys(filterParams).length) {
       const possibleParams = {
@@ -100,14 +92,14 @@ export async function getPlayedWith(
       const params = new URLSearchParams(filteredParams);
       ajaxUrl = `${ajaxUrl}?${params}`;
     }
-    const resp = await agent.fetch(ajaxUrl, { method: 'get' });
+    const resp = await hero.fetch(ajaxUrl, { method: 'get' });
     if (!(await resp.ok))
       throw new Error(`Failed to get playedWith data: ${await resp.statusText}`);
     const body: PlayedWith = await resp.json();
-    await agent.close();
+    await hero.close();
     return body;
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }
@@ -117,7 +109,7 @@ export async function getPlayer(
   anySteamId: string | bigint,
   filterParams?: PlayerFilterParams
 ): Promise<PlayerOutput> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = this.createHero();
   try {
     const steamId64 = new SteamID(anySteamId).getSteamID64();
 
@@ -143,45 +135,46 @@ export async function getPlayer(
       resolvedUrl = `${resolvedUrl}?${params}`;
     }
     this.debug(`Going to ${resolvedUrl}`);
-    const gotoResp = await agent.goto(resolvedUrl, this.timeout);
+    const gotoResp = await hero.goto(resolvedUrl, { timeoutMs: this.timeout });
 
     // Check for page error
-    const statusCode = await gotoResp.response.statusCode;
+    const { statusCode } = gotoResp.response;
     if (statusCode !== 200) {
       throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
     }
 
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
-    const steamProfileUrl = await agent.document.querySelector('.steam-icon').parentElement.href;
+    const steamProfileUrl = await hero.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
-    let eseaUrl;
-    try {
-      eseaUrl = await agent.document.querySelector('.esea-icon').parentElement.href;
-    } catch {
-      eseaUrl = undefined;
+    const eseaElem = hero.document.querySelector('.esea-icon');
+    let eseaUrl: string | undefined;
+    if ((await eseaElem.$exists) && (await eseaElem.parentElement.$exists)) {
+      eseaUrl = await eseaElem.parentElement.href;
     }
+
     this.debug(`eseaUrl: ${eseaUrl}`);
-    const steamPictureUrl = await agent.document.querySelector(
-      'img[src*="steamcdn"][width="120"][height="120"]'
+    // https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg
+    // https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg
+    const steamPictureUrl = await hero.document.querySelector(
+      'img[src*="akamai"][width="120"][height="120"]'
     ).src;
     this.debug(`steamPictureUrl: ${steamPictureUrl}`);
 
-    const currentRank = await parseRank(agent, `[width="92"]`);
+    const currentRank = await parseRank(hero, `[width="92"]`);
     this.debug(`currentRank: ${currentRank}`);
-    let bestRank = await parseRank(agent, `[height="24"]`);
+    let bestRank = await parseRank(hero, `[height="24"]`);
     if (currentRank && !bestRank) bestRank = currentRank;
     this.debug(`bestRank: ${bestRank}`);
 
-    const competitiveWins = await parseNumber(agent, parseInt, '#competitve-wins > span');
+    const competitiveWins = await parseNumber(hero, parseInt, '#competitve-wins > span');
     this.debug(`competitiveWins: ${competitiveWins}`);
 
-    const lastGameAndBanElem = agent.document.querySelector('#last-game');
-    let lastGameString;
-    try {
+    const lastGameAndBanElem = hero.document.querySelector('#last-game');
+    let lastGameString: string | undefined;
+    if ((await lastGameAndBanElem.$exists) && (await lastGameAndBanElem.firstChild.$exists)) {
       lastGameString = (await lastGameAndBanElem.firstChild.textContent)?.trim() as string;
-    } catch {
-      lastGameString = undefined;
     }
+
     this.debug(`lastGameString: ${lastGameString}`);
     let lastGameDate: Date | undefined;
     if (lastGameString) {
@@ -201,18 +194,17 @@ export async function getPlayer(
     }
 
     // Check for no data
-    const noMatchesMessage = agent.document.querySelector(
+    const noMatchesMessage = hero.document.querySelector(
       '#player-outer-section > div:nth-child(2) > div > span'
     );
-    let errorMessage;
-    try {
+    let errorMessage: string | undefined;
+    if (await noMatchesMessage.$exists) {
       errorMessage = await noMatchesMessage.innerText;
-    } catch {
-      errorMessage = undefined;
     }
+
     if (errorMessage) {
       this.debug(errorMessage);
-      await agent.close();
+      await hero.close();
       return {
         summary: {
           steamId64,
@@ -229,43 +221,43 @@ export async function getPlayer(
       };
     }
 
-    const killDeathRatio = (await parseNumber(agent, parseFloat, `#kpd > span`)) as number;
+    const killDeathRatio = (await parseNumber(hero, parseFloat, `#kpd > span`)) as number;
     this.debug(`killDeathRatio: ${killDeathRatio}`);
-    const hltvRating = (await parseNumber(agent, parseFloat, `#rating > span`)) as number;
+    const hltvRating = (await parseNumber(hero, parseFloat, `#rating > span`)) as number;
     this.debug(`hltvRating: ${hltvRating}`);
     const clutchSuccessRate = (await parseNumber(
-      agent,
+      hero,
       parsePercent,
       `#player-overview > div.stats-col-2 > div > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > span:nth-child(2)`
     )) as number;
     this.debug(`clutchSuccessRate: ${clutchSuccessRate}`);
 
     const winRate = (await parseNumber(
-      agent,
+      hero,
       parsePercent,
       `#player-overview > div.stats-col-1 > div:nth-child(4) > div > div:nth-child(2) > div:nth-child(2)`
     )) as number;
     this.debug(`winRate: ${winRate}`);
     const headshotRate = (await parseNumber(
-      agent,
+      hero,
       parsePercent,
       `#player-overview > div.stats-col-1 > div:nth-child(5) > div > div:nth-child(2) > div:nth-child(2)`
     )) as number;
     this.debug(`headshotRate: ${headshotRate}`);
     const averageDamageRound = (await parseNumber(
-      agent,
+      hero,
       parseInt,
       `#player-overview > div.stats-col-1 > div:nth-child(6) > div > div:nth-child(2) > div:nth-child(2)`
     )) as number;
     this.debug(`averageDamageRound: ${averageDamageRound}`);
     const entrySuccessRate = (await parseNumber(
-      agent,
+      hero,
       parsePercent,
       `#player-overview > div.stats-col-2 > div > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > span:nth-child(2)`
     )) as number;
     this.debug(`entrySuccessRate: ${entrySuccessRate}`);
 
-    const documentHtml = await agent.document.documentElement.innerHTML;
+    const documentHtml = await hero.document.documentElement.innerHTML;
     const rawDataMatches = documentHtml.match(/raw_data = (\[.*?\]);\n/);
     let graphsRawData: GraphsRawData;
     if (rawDataMatches?.[1]) {
@@ -276,7 +268,7 @@ export async function getPlayer(
 
     this.debug(`graphsRawData.length: ${graphsRawData.length}`);
 
-    await agent.close();
+    await hero.close();
     return {
       summary: {
         steamId64,
@@ -310,7 +302,7 @@ export async function getPlayer(
         }),
     };
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }
@@ -320,43 +312,42 @@ export async function searchPlayer(
   searchString: string,
   filterParams?: PlayerFilterParams
 ): Promise<PlayerOutput> {
-  const agent = (await this.handler.createAgent()) as Agent;
+  const hero = this.createHero();
   try {
     this.debug(`Going to ${HOMEPAGE}`);
-    const gotoResp = await agent.goto(HOMEPAGE, this.timeout);
+    const gotoResp = await hero.goto(HOMEPAGE, { timeoutMs: this.timeout });
 
     // Cloudflare page will return a 403
-    const statusCode = await gotoResp.response.statusCode;
+    const { statusCode } = gotoResp.response;
     if (statusCode !== 200) {
       throw new Error(`csgostats.gg returned a non-200 response: ${statusCode}`);
     }
 
-    await agent.activeTab.waitForLoad(LocationStatus.DomContentLoaded, { timeoutMs: this.timeout });
-    await agent.interact(
-      { click: agent.document.querySelector(`#search-input`) },
+    await hero.activeTab.waitForLoad(LocationStatus.DomContentLoaded, { timeoutMs: this.timeout });
+    await hero.interact(
+      { click: hero.document.querySelector(`#search-input`) },
       { type: searchString },
-      { keyPress: KeyboardKeys.Enter }
+      { keyPress: KeyboardKey.Enter }
     );
 
     this.debug(`Waiting for location change`);
-    await agent.activeTab.waitForLoad(LocationStatus.DomContentLoaded, { timeoutMs: this.timeout });
+    await hero.activeTab.waitForLoad(LocationStatus.DomContentLoaded, { timeoutMs: this.timeout });
 
-    const errorBanner = agent.document.querySelector(`div.alert.alert-danger`);
-    let errorMessage;
-    try {
+    const errorBanner = hero.document.querySelector(`div.alert.alert-danger`);
+    let errorMessage: string | undefined;
+    if (await errorBanner.$exists) {
       errorMessage = (await errorBanner.innerText).trim().replace(/\n/g, '');
-    } catch {
-      errorMessage = undefined;
     }
+
     if (errorMessage) throw new Error(errorMessage);
 
     // Check for 404
-    const steamId64 = (await agent.document.location.pathname).split('/').at(-1) as string;
+    const steamId64 = (await hero.document.location.pathname).split('/').at(-1) as string;
     this.debug(`steamId64: ${steamId64}`);
-    await agent.close();
+    await hero.close();
     return this.getPlayer(steamId64, filterParams);
   } catch (err) {
-    await agent.close();
+    await hero.close();
     throw err;
   }
 }

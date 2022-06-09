@@ -1,6 +1,6 @@
 {
   "name": "csgostatsgg-scraper",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "description": "Programatically pull data from csgostats.gg pages via page scraping",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -27,10 +27,10 @@
   "author": "claabs",
   "license": "MIT",
   "dependencies": {
+    "@ulixee/hero-fullstack": "^2.0.0-alpha.3",
     "chrono-node": "^2.3.7",
     "debug": "^4.3.3",
-    "dotenv": "^16.0.0",
-    "secret-agent": "^1.6.4",
+    "p-queue": "^6.6.2",
     "steamid": "^2.0.0"
   },
   "devDependencies": {

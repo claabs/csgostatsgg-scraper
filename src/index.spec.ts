@@ -10,9 +10,9 @@ describe('The scraper class', () => {
     scraper = new CSGOStatsGGScraper({ logger: console.log });
   });
 
-  afterAll(async () => {
-    await scraper.close();
-  });
+  // afterAll(async () => {
+  //   await scraper.close();
+  // });
 
   it('should be extendable', async () => {
     class Extended extends CSGOStatsGGScraper {
