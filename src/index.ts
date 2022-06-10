@@ -3,6 +3,7 @@ import Hero, { IHeroCreateOptions } from '@ulixee/hero';
 import PQueue from 'p-queue';
 import { getMatch, listLatestMatches, searchMatch } from './match';
 import { getPlayedWith, getPlayer, searchPlayer } from './player';
+import LocalHero from './local-hero';
 
 export * from './player-types';
 export * from './match-types';
@@ -18,6 +19,11 @@ export interface ScraperOptions {
    * Any overrides you directly want to set on the Hero instance
    */
   heroOverrides?: IHeroCreateOptions;
+
+  /**
+   * If true, a Hero core will run locally, rather than using a configured remote core
+   */
+  localHero?: boolean;
 
   /**
    * How many functions can be run concurrently. Any extra will be queued.
@@ -40,6 +46,8 @@ export class CSGOStatsGGScraper {
 
   protected queue: PQueue;
 
+  private localHero = true;
+
   constructor(options?: ScraperOptions) {
     this.heroOptions = {
       blockedResourceTypes: ['All'],
@@ -48,16 +56,17 @@ export class CSGOStatsGGScraper {
     this.timeout = options?.timeout ?? this.timeout;
     this.debug = (options?.logger as Debugger) ?? this.debug;
     this.queue = new PQueue({ concurrency: options?.concurrency ?? 10 });
+    this.localHero = options?.localHero ?? this.localHero;
   }
 
   protected async createHero(): Promise<Hero> {
-    let ChosenHero: typeof Hero;
     try {
-      ChosenHero = (await import('@ulixee/hero-fullstack')).default;
+      const core = await import('@ulixee/hero-core'); // If this doesn't throw, we can create a local Hero
+      if (core && this.localHero) return LocalHero.create(this.heroOptions);
     } catch {
-      ChosenHero = Hero;
+      // continue
     }
-    return new ChosenHero(this.heroOptions);
+    return new Hero(this.heroOptions);
   }
 
   public searchPlayer(...args: Parameters<typeof searchPlayer>): ReturnType<typeof searchPlayer> {

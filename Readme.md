@@ -27,10 +27,10 @@ Due to csgostats.gg not having an API, and being mostly protected by Cloudflare,
 
 ### Install
 
-To start, it's best to run with a local Hero Core, so you should install `@ulixee/hero-fullstack` as a peer dependency:
+To start, it's best to run with a local Hero Core, so you should install `@ulixee/hero-core` as a peer dependency:
 
 ```shell
-npm i csgostatsgg-scraper @ulixee/hero-fullstack
+npm i csgostatsgg-scraper @ulixee/hero-core
 ```
 
-Later, if you'd like to use a remote Hero Core, you can remove the `@ulixee/hero-fullstack` peer dependency.
+Later, if you'd like to use a remote Hero Core, you can remove the `@ulixee/hero-core` peer dependency.

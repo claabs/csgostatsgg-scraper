@@ -2,6 +2,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import typescript from '@rollup/plugin-typescript';
+import commonjs from '@rollup/plugin-commonjs';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('./package.json');
@@ -42,6 +43,7 @@ export default {
     // which external modules to include in the bundle
     // https://github.com/rollup/rollup-plugin-node-resolve#usage
     resolve(),
+    commonjs(),
     // Resolve source maps to the original source
     sourceMaps(),
   ],
