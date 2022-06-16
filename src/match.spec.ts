@@ -11,9 +11,9 @@ describe('The match scrapers', () => {
     scraper = new CSGOStatsGGScraper({ logger: console.log });
   });
 
-  // afterAll(async () => {
-  //   await scraper.close();
-  // });
+  afterAll(async () => {
+    await scraper.shutdown();
+  });
 
   it('should list the latest matches', async () => {
     const results = await scraper.listLatestMatches();

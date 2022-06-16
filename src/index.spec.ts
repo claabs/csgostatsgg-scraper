@@ -18,5 +18,15 @@ describe('The scraper class', () => {
     const extendedScraper = new Extended();
     const resp = await extendedScraper.getPlayer('76561197960268519');
     expect(resp).toBeDefined();
+    await extendedScraper.shutdown();
+  });
+
+  it('should shutdown and restart the core', async () => {
+    const scraper = new CSGOStatsGGScraper();
+    await scraper.listLatestMatches();
+    await scraper.shutdown();
+    const latestMatches = await scraper.listLatestMatches();
+    expect(latestMatches).toBeDefined();
+    await scraper.shutdown();
   });
 });

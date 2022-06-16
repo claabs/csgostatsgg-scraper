@@ -10,9 +10,9 @@ describe('The player scrapers', () => {
     scraper = new CSGOStatsGGScraper({ logger: console.log });
   });
 
-  // afterAll(async () => {
-  //   await scraper.close();
-  // });
+  afterAll(async () => {
+    await scraper.shutdown();
+  });
 
   it('should get data for one player', async () => {
     const results = await scraper.searchPlayer('hiko36'); // Hiko

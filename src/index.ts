@@ -1,6 +1,7 @@
 import debug, { Debugger } from 'debug';
 import Hero, { IHeroCreateOptions } from '@ulixee/hero';
 import PQueue from 'p-queue';
+import type Core from '@ulixee/hero-core';
 import { getMatch, listLatestMatches, searchMatch } from './match';
 import { getPlayedWith, getPlayer, searchPlayer } from './player';
 import LocalHero from './local-hero';
@@ -22,11 +23,12 @@ export interface ScraperOptions {
 
   /**
    * If true, a Hero core will run locally, rather than using a configured remote core
+   * @default true
    */
-  localHero?: boolean;
+  useLocalHero?: boolean;
 
   /**
-   * How many functions can be run concurrently. Any extra will be queued.
+   * The number of requests that can be run concurrently. Any extra will be queued.
    * @default 10
    */
   concurrency?: number;
@@ -46,7 +48,11 @@ export class CSGOStatsGGScraper {
 
   protected queue: PQueue;
 
-  private localHero = true;
+  private useLocalHero = true;
+
+  private Core?: typeof Core;
+
+  private heroCore?: typeof import('@ulixee/hero-core');
 
   constructor(options?: ScraperOptions) {
     this.heroOptions = {
@@ -56,13 +62,31 @@ export class CSGOStatsGGScraper {
     this.timeout = options?.timeout ?? this.timeout;
     this.debug = (options?.logger as Debugger) ?? this.debug;
     this.queue = new PQueue({ concurrency: options?.concurrency ?? 10 });
-    this.localHero = options?.localHero ?? this.localHero;
+    this.useLocalHero = options?.useLocalHero ?? this.useLocalHero;
+
+    this.queue.on('add', () => {
+      if (this.queue.size) {
+        this.debug(`${this.queue.size} requests are currently waiting`);
+      }
+    });
+  }
+
+  public async shutdown(): Promise<void> {
+    if (this.Core) {
+      this.debug('Shutting down core');
+      await this.Core.shutdown();
+      this.Core = undefined;
+    }
   }
 
   protected async createHero(): Promise<Hero> {
     try {
-      const core = await import('@ulixee/hero-core'); // If this doesn't throw, we can create a local Hero
-      if (core && this.localHero) return LocalHero.create(this.heroOptions);
+      this.heroCore = this.heroCore ?? (await import('@ulixee/hero-core')); // If this doesn't throw, we can create a local Hero
+      if (this.heroCore && this.useLocalHero) {
+        const localHero = LocalHero.create(this.heroOptions);
+        this.Core = LocalHero.Core;
+        return localHero;
+      }
     } catch {
       // continue
     }
