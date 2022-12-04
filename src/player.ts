@@ -53,13 +53,13 @@ async function parseRank(
 
 function parseCSGOStatsDate(dateString: string): Date {
   // Last Game Sun, 9th May
-  // Last Game Mon, 2nd Nov, 20
+  // Last Game Sat 26th Feb 22
   // Last Game 2 days ago
   // Last Game 25 minutes ago
   // Overwatch Banned 97 days ago.
   const resolvedDate = chrono.parseDate(dateString);
   // Chrono doesn't detect the trailing 2-digit year, so we have to detect it and append it manually
-  const [, endYear] = dateString.match(/^.*?,.*?, (\d{2})$/) || [];
+  const [, endYear] = dateString.match(/^.*?.*? (\d{2})$/) || [];
   if (endYear) {
     resolvedDate.setFullYear(2000 + parseInt(endYear, 10));
   }
