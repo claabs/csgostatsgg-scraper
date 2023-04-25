@@ -36,19 +36,22 @@ async function parseNumber(
 
 async function parseRank(
   hero: Omit<Hero, 'then'>,
-  selectorSuffix: string
+  elementWidth: string
 ): Promise<MatchmakingRank | undefined> {
-  const rankImgUrlPrefix = 'https://static.csgostats.gg/images/ranks/';
-  const rankImgUrlExt = '.png';
-  const rankImgElem = hero.document.querySelector(
-    `img[src^="${rankImgUrlPrefix}"]${selectorSuffix}`
-  );
-  if (!(await rankImgElem.$exists)) return undefined;
-  const rankImgUrl = await rankImgElem.src;
-  return parseInt(
-    rankImgUrl.substring(rankImgUrlPrefix.length, rankImgUrl.indexOf(rankImgUrlExt)),
-    10
-  );
+  const rankImgElems = hero.document.querySelectorAll(`.player-ranks div span`);
+  let rankImgUrl: string | undefined;
+  for (const rankImgElem of await rankImgElems) {
+    const style = await rankImgElem.getAttribute('style');
+    if (style?.includes(`width:${elementWidth};`)) {
+      const computedStyle = await hero.getComputedStyle(rankImgElem);
+      rankImgUrl = await computedStyle.getPropertyValue('background-image');
+    }
+  }
+
+  if (!rankImgUrl) return undefined;
+  const rank = rankImgUrl.match(/static\.csgostats\.gg\/images\/ranks\/(\d+)\.png/)?.[1];
+  if (!rank) return undefined;
+  return parseInt(rank, 10);
 }
 
 function parseCSGOStatsDate(dateString: string): Date {
@@ -149,23 +152,21 @@ export async function getPlayer(
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
     const steamProfileUrl = await hero.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
-    const eseaElem = hero.document.querySelector('.esea-icon');
+    const eseaElem = hero.document.querySelector('.main-container .player-ident-outer a[href*="play.esea"]');
     let eseaUrl: string | undefined;
-    if ((await eseaElem.$exists) && (await eseaElem.parentElement.$exists)) {
-      eseaUrl = await eseaElem.parentElement.href;
-    }
+    if (await eseaElem.$exists) eseaUrl = await eseaElem.href;
 
     this.debug(`eseaUrl: ${eseaUrl}`);
     // https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg
     // https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg
     const steamPictureUrl = await hero.document.querySelector(
-      'img[src*="akamai"][width="120"][height="120"]'
+      'img[src*="akamai"][width="121"][height="121"]' // TODO: Make this more robust
     ).src;
     this.debug(`steamPictureUrl: ${steamPictureUrl}`);
 
-    const currentRank = await parseRank(hero, `[width="92"]`);
+    const currentRank = await parseRank(hero, `92px`);
     this.debug(`currentRank: ${currentRank}`);
-    let bestRank = await parseRank(hero, `[height="24"]`);
+    let bestRank = await parseRank(hero, `60px`);
     if (currentRank && !bestRank) bestRank = currentRank;
     this.debug(`bestRank: ${bestRank}`);
 
@@ -198,7 +199,7 @@ export async function getPlayer(
 
     // Check for no data
     const noMatchesMessage = hero.document.querySelector(
-      '#player-outer-section > div:nth-child(2) > div > span'
+      '#player-outer-section > div[style] > div > span'
     );
     let errorMessage: string | undefined;
     if (await noMatchesMessage.$exists) {
