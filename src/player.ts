@@ -36,17 +36,15 @@ async function parseNumber(
 
 async function parseRank(
   hero: Omit<Hero, 'then'>,
-  elementWidth: string
+  index: number
 ): Promise<MatchmakingRank | undefined> {
-  const rankImgElems = hero.document.querySelectorAll(`.player-ranks div span`);
+  // I don't think that this is the best use of ESL's resources, but you do you.
+  const rankImgElems = await hero.document.querySelectorAll(`.player-ranks *[class*='p-'][style*='display:block;']`);
+  if(index >= await rankImgElems.length) return undefined;
+  const rankImgElem = await rankImgElems.item(index);
   let rankImgUrl: string | undefined;
-  for (const rankImgElem of await rankImgElems) {
-    const style = await rankImgElem.getAttribute('style');
-    if (style?.includes(`width:${elementWidth};`)) {
-      const computedStyle = await hero.getComputedStyle(rankImgElem);
-      rankImgUrl = await computedStyle.getPropertyValue('background-image');
-    }
-  }
+  const computedStyle = await hero.getComputedStyle(rankImgElem);
+  rankImgUrl = await computedStyle.getPropertyValue('background-image');
 
   if (!rankImgUrl) return undefined;
   const rank = rankImgUrl.match(/static\.csgostats\.gg\/images\/ranks\/(\d+)\.png/)?.[1];
@@ -152,21 +150,22 @@ export async function getPlayer(
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
     const steamProfileUrl = await hero.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
-    const eseaElem = hero.document.querySelector('.main-container .player-ident-outer a[href*="play.esea"]');
+    const eseaElem = hero.document.querySelector('.main-container .player-ident-outer a[href*="play.esea"][style="float:left; display:block;"]');
     let eseaUrl: string | undefined;
     if (await eseaElem.$exists) eseaUrl = await eseaElem.href;
 
     this.debug(`eseaUrl: ${eseaUrl}`);
     // https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg
     // https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg
+    // It's honestly hilarious seeing the 1px changes constantly :)
     const steamPictureUrl = await hero.document.querySelector(
-      'img[src*="akamai"][width="121"][height="121"]' // TODO: Make this more robust
+      '.main-container .player-ident-outer img[src*="akamai"]'
     ).src;
     this.debug(`steamPictureUrl: ${steamPictureUrl}`);
 
-    const currentRank = await parseRank(hero, `92px`);
+    const currentRank = await parseRank(hero, 0);
     this.debug(`currentRank: ${currentRank}`);
-    let bestRank = await parseRank(hero, `60px`);
+    let bestRank = await parseRank(hero, 1);
     if (currentRank && !bestRank) bestRank = currentRank;
     this.debug(`bestRank: ${bestRank}`);
 
@@ -199,7 +198,7 @@ export async function getPlayer(
 
     // Check for no data
     const noMatchesMessage = hero.document.querySelector(
-      '#player-outer-section > div[style] > div > span'
+      '#player-outer-section > div[style*="padding"] > div > span'
     );
     let errorMessage: string | undefined;
     if (await noMatchesMessage.$exists) {
