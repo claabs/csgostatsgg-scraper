@@ -1,7 +1,7 @@
 import { URLSearchParams } from 'url';
 import SteamID from 'steamid';
 import * as chrono from 'chrono-node';
-import Hero, { KeyboardKey, LocationStatus } from '@ulixee/hero';
+import Hero, { ISuperNode, KeyboardKey, LocationStatus } from "@ulixee/hero";
 import {
   PlayerFilterParams,
   PlayerOutput,
@@ -34,22 +34,33 @@ async function parseNumber(
   return parseFunc(await elem.innerText, 10);
 }
 
-async function parseRank(
-  hero: Omit<Hero, 'then'>,
-  index: number
-): Promise<MatchmakingRank | undefined> {
+async function parseRanks(
+  hero: Omit<Hero, 'then'>
+): Promise<MatchmakingRank[]> {
   // I don't think that this is the best use of ESL's resources, but you do you.
-  const rankImgElems = await hero.document.querySelectorAll(`.player-ranks *[class*='-'][style*='display:block;']`);
-  if(index >= await rankImgElems.length) return undefined;
-  const rankImgElem = await rankImgElems.item(index);
-  let rankImgUrl: string | undefined;
-  const computedStyle = await hero.getComputedStyle(rankImgElem);
-  rankImgUrl = await computedStyle.getPropertyValue('background-image');
 
-  if (!rankImgUrl) return undefined;
-  const rank = rankImgUrl.match(/static\.csgostats\.gg\/images\/ranks\/(\d+)\.png/)?.[1];
-  if (!rank) return undefined;
-  return parseInt(rank, 10);
+  const elems = await hero.document.querySelectorAll(`.player-ranks > div > *`);
+  const ranks = [];
+
+  for (const elem of elems) {
+    if((await hero.getComputedVisibility(elem)).isVisible) {
+      const computedStyle = hero.getComputedStyle(elem);
+      const rankImgUrl = await computedStyle.getPropertyValue('background-image');
+      if (!rankImgUrl) continue;
+      const rank = rankImgUrl.match(/static\.csgostats\.gg\/images\/ranks\/(\d+)\.png/)?.[1];
+      if (!rank) continue;
+      ranks.push(parseInt(rank, 10));
+    }
+  }
+  return ranks;
+}
+
+async function followEseaRedirect(hero: Omit<Hero, 'then'>, url: string): Promise<string> {
+  await hero.goto(url, { timeoutMs: 10000 });
+  await hero.waitForLocation('change', { timeoutMs: 10000 });
+  const eseaUrl = await hero.url;
+  await hero.goBack();
+  return eseaUrl;
 }
 
 function parseCSGOStatsDate(dateString: string): Date {
@@ -151,10 +162,10 @@ export async function getPlayer(
     const steamProfileUrl = await hero.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
     const eseaElem = hero.document.querySelector(
-      '.main-container .player-ident-outer > div > a[href*="play.esea"][style*="display:block;"][style*="float:left;"]'
+      '.main-container .player-ident-outer > div > a[href*="csgostats.gg/redirect/esea/"][style*="display:block;"][style*="float:left;"]'
     );
     let eseaUrl: string | undefined;
-    if (await eseaElem.$exists) eseaUrl = await eseaElem.href;
+    if (await eseaElem.$exists) eseaUrl = await followEseaRedirect(hero, await eseaElem.href);
 
     this.debug(`eseaUrl: ${eseaUrl}`);
     // https://avatars.akamai.steamstatic.com/d41ec69cf1f3546819950fc3a8d3096c18d7e42d_full.jpg
@@ -165,10 +176,10 @@ export async function getPlayer(
     ).src;
     this.debug(`steamPictureUrl: ${steamPictureUrl}`);
 
-    const currentRank = await parseRank(hero, 0);
+    const ranks = await parseRanks(hero);
+    const currentRank = ranks[0];
     this.debug(`currentRank: ${currentRank}`);
-    let bestRank = await parseRank(hero, 1);
-    if (currentRank && !bestRank) bestRank = currentRank;
+    const bestRank = ranks[1] || currentRank;
     this.debug(`bestRank: ${bestRank}`);
 
     const competitiveWins = await parseNumber(hero, parseInt, '#competitve-wins > span');
@@ -199,12 +210,20 @@ export async function getPlayer(
     }
 
     // Check for no data
-    const noMatchesMessage = hero.document.querySelector(
-      '#player-outer-section > div[style*="padding"]:nth-last-child(1) > div > span'
+    const noMatchesMessageElems = hero.document.querySelectorAll(
+      '#player-outer-section > div[style*="padding"] > div > *'
     );
     let errorMessage: string | undefined;
-    if (await noMatchesMessage.$exists) {
-      errorMessage = await noMatchesMessage.innerText;
+    for(let i = await noMatchesMessageElems.length - 1; i >= 0; i--) {
+      const elem = noMatchesMessageElems[i];
+      const innerText = await elem.innerText;
+      if(await elem.$exists
+        && (await hero.getComputedVisibility(elem)).isVisible
+        && innerText.length > 10
+        && innerText.toLowerCase().includes('no matches')) {
+        errorMessage = innerText;
+        break;
+      }
     }
 
     if (errorMessage) {
