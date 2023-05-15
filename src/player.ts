@@ -39,7 +39,7 @@ async function parseRank(
   index: number
 ): Promise<MatchmakingRank | undefined> {
   // I don't think that this is the best use of ESL's resources, but you do you.
-  const rankImgElems = await hero.document.querySelectorAll(`.player-ranks *[class*='p-'][style*='display:block;']`);
+  const rankImgElems = await hero.document.querySelectorAll(`.player-ranks *[class*='-'][style*='display:block;']`);
   if(index >= await rankImgElems.length) return undefined;
   const rankImgElem = await rankImgElems.item(index);
   let rankImgUrl: string | undefined;
@@ -150,7 +150,9 @@ export async function getPlayer(
     // TODO: Figure out elegant and readable way to this with destructuring and a Promise.all or something
     const steamProfileUrl = await hero.document.querySelector('.steam-icon').parentElement.href;
     this.debug(`steamProfileUrl: ${steamProfileUrl}`);
-    const eseaElem = hero.document.querySelector('.main-container .player-ident-outer a[href*="play.esea"][style="float:left; display:block;"]');
+    const eseaElem = hero.document.querySelector(
+      '.main-container .player-ident-outer > div > a[href*="play.esea"][style*="display:block;"][style*="float:left;"]'
+    );
     let eseaUrl: string | undefined;
     if (await eseaElem.$exists) eseaUrl = await eseaElem.href;
 
@@ -159,7 +161,7 @@ export async function getPlayer(
     // https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/88/883f2697f5b2dc4affda2d47eedc1cbec8cfb657_full.jpg
     // It's honestly hilarious seeing the 1px changes constantly :)
     const steamPictureUrl = await hero.document.querySelector(
-      '.main-container .player-ident-outer img[src*="akamai"]'
+      '.main-container .player-ident-outer > img[src*="akamai"]'
     ).src;
     this.debug(`steamPictureUrl: ${steamPictureUrl}`);
 
@@ -198,7 +200,7 @@ export async function getPlayer(
 
     // Check for no data
     const noMatchesMessage = hero.document.querySelector(
-      '#player-outer-section > div[style*="padding"] > div > span'
+      '#player-outer-section > div[style*="padding"]:nth-last-child(1) > div > span'
     );
     let errorMessage: string | undefined;
     if (await noMatchesMessage.$exists) {
